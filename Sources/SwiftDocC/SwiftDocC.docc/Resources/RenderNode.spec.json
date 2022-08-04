@@ -788,9 +788,23 @@
                         "items": {
                             "type": "array",
                             "items": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/components/schemas/RenderBlockContent"
+                                "required": [
+                                    "inlineContent"
+                                ],
+                                "type": "object",
+                                "properties": {
+                                    "inlineContent": {
+                                        "type": "array",
+                                        "items": {
+                                            "$ref": "#/components/schemas/RenderBlockContent"
+                                        }
+                                    },
+                                    "colspan": {
+                                        "type": "integer"
+                                    },
+                                    "rowspan": {
+                                        "type": "integer"
+                                    }
                                 }
                             }
                         }
