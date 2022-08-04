@@ -795,6 +795,23 @@
                             }
                         }
                     },
+                    "extendedData": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "colspan": {
+                                        "type": "integer"
+                                    },
+                                    "rowspan": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    },
                     "metadata": {
                         "$ref": "#/components/schemas/RenderContentMetadata"
                     }
