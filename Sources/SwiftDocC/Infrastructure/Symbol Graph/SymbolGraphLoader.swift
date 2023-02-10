@@ -21,14 +21,20 @@ struct SymbolGraphLoader {
     private(set) var graphLocations: [String: [SymbolKit.GraphCollector.GraphKind]] = [:]
     private var dataProvider: DocumentationContextDataProvider
     private var bundle: DocumentationBundle
+    private let metadata: ExternalMetadata
     
     /// Creates a new loader, initialized with the given bundle.
     /// - Parameters:
     ///   - bundle: The documentation bundle from which to load symbol graphs.
     ///   - dataProvider: A data provider in the bundle's context.
-    init(bundle: DocumentationBundle, dataProvider: DocumentationContextDataProvider) {
+    init(
+        bundle: DocumentationBundle,
+        dataProvider: DocumentationContextDataProvider,
+        metadata: ExternalMetadata = ExternalMetadata()
+    ) {
         self.bundle = bundle
         self.dataProvider = dataProvider
+        self.metadata = metadata
     }
     
     /// A strategy to decode symbol graphs.
@@ -71,6 +77,23 @@ struct SymbolGraphLoader {
                 case .concurrentlyEachFileInBatches:
                     symbolGraph = try SymbolGraphConcurrentDecoder.decode(data, using: decoder)
                 }
+
+                var filteredSymbols = Set<String>()
+
+                if metadata.disableInheritedSymbols {
+                    for relationship in symbolGraph.relationships {
+                        if relationship.mixins.keys.contains(SymbolGraph.Relationship.SourceOrigin.mixinKey) {
+                            filteredSymbols.insert(relationship.source)
+                        }
+                    }
+                }
+
+                symbolGraph.symbols = symbolGraph.symbols.filter({ !filteredSymbols.contains($0.key) })
+
+                // Filter out any relationship that referenced the removed symbols
+                symbolGraph.relationships.removeAll(where: { relationship in
+                    filteredSymbols.contains(relationship.source) || filteredSymbols.contains(relationship.target)
+                })
 
                 // `moduleNameFor(_:at:)` is static because it's pure function.
                 let (moduleName, isMainSymbolGraph) = Self.moduleNameFor(symbolGraph, at: symbolGraphURL)

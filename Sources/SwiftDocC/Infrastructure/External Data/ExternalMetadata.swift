@@ -76,6 +76,9 @@ public struct ExternalMetadata {
     /// If `true`, inherited symbols retain their original docs.
     public var inheritDocs = false
 
+    /// If `true`, inherited symbols are removed from documentation.
+    public var disableInheritedSymbols = false
+
     /// If `true`, there is no source bundle on disk and the inputs were passed via command line parameters.
     public var isGeneratedBundle = false
     

@@ -1963,7 +1963,7 @@ public class DocumentationContext: DocumentationContextDataProviderDelegate {
         var hierarchyBasedResolver: PathHierarchyBasedLinkResolver!
         
         discoveryGroup.async(queue: discoveryQueue) { [unowned self] in
-            symbolGraphLoader = SymbolGraphLoader(bundle: bundle, dataProvider: self.dataProvider)
+            symbolGraphLoader = SymbolGraphLoader(bundle: bundle, dataProvider: self.dataProvider, metadata: self.externalMetadata)
             do {
                 try symbolGraphLoader.loadAll(using: decoder)
                 if LinkResolutionMigrationConfiguration.shouldSetUpHierarchyBasedLinkResolver {

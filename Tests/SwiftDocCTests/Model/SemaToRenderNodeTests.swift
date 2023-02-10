@@ -2931,6 +2931,29 @@ Document
             ])
         }
     }
+
+    func testDisabledInheritedSymbols() throws {
+        let bundleURL = Bundle.module.url(
+            forResource: "TestBundle", withExtension: "docc", subdirectory: "Test Bundles")!
+
+        let (_, bundle, context) = try loadBundle(from: bundleURL, configureContext: { context in
+            context.externalMetadata.disableInheritedSymbols = true
+        })
+
+        // Verify that we don't reference resolve inherited docs.
+        XCTAssertFalse(context.diagnosticEngine.problems.contains(where: { problem in
+            problem.diagnostic.localizedSummary.contains("my-inherited-image.png")
+        }))
+
+        let myFuncReference = ResolvedTopicReference(bundleIdentifier: bundle.identifier, path: "/documentation/SideKit/SideClass/Element/inherited()", sourceLanguage: .swift)
+
+        do {
+            let _ = try context.entity(with: myFuncReference)
+            XCTFail("SideClass.Element.inherited() should not exist")
+        } catch DocumentationContext.ContextError.notFound {
+            // this is expected - inherited symbols should have been dropped via `disableInheritedSymbols`
+        }
+    }
     
     // Verifies that undocumented symbol gets a nil abstract.
     func testNonDocumentedSymbolNilAbstract() throws {

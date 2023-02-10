@@ -142,6 +142,13 @@ extension Docc {
         /// Defaults to false.
         @Flag(help: "Inherit documentation for inherited symbols")
         public var enableInheritedDocs = false
+
+        /// A user-provided value that is true if symbols that would inherit docs (e.g. from
+        /// protocol conformances) should be removed from documentation.
+        ///
+        /// Defaults to false.
+        @Flag(help: .hidden)
+        public var experimentalDisableInheritedSymbols = false
         
         
         @Flag(help: "Treat warnings as errors")

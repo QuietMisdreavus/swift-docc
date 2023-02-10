@@ -33,6 +33,7 @@ public struct ConvertAction: Action, RecreatingContext {
     let htmlTemplateDirectory: URL?
     let emitDigest: Bool
     let inheritDocs: Bool
+    let disableInheritedSymbols: Bool
     let treatWarningsAsErrors: Bool
     let experimentalEnableCustomTemplates: Bool
     let buildLMDBIndex: Bool
@@ -100,6 +101,7 @@ public struct ConvertAction: Action, RecreatingContext {
         diagnosticEngine: DiagnosticEngine? = nil,
         emitFixits: Bool = false,
         inheritDocs: Bool = false,
+        disableInheritedSymbols: Bool = false,
         treatWarningsAsErrors: Bool = false,
         experimentalEnableCustomTemplates: Bool = false,
         transformForStaticHosting: Bool = false,
@@ -137,6 +139,7 @@ public struct ConvertAction: Action, RecreatingContext {
             formattingOptions = []
         }
         self.inheritDocs = inheritDocs
+        self.disableInheritedSymbols = disableInheritedSymbols
         self.treatWarningsAsErrors = treatWarningsAsErrors
 
         self.experimentalEnableCustomTemplates = experimentalEnableCustomTemplates
@@ -157,6 +160,7 @@ public struct ConvertAction: Action, RecreatingContext {
 
         // Inject user-set flags.
         self.context.externalMetadata.inheritDocs = inheritDocs
+        self.context.externalMetadata.disableInheritedSymbols = disableInheritedSymbols
         
         switch documentationCoverageOptions.level {
         case .detailed, .brief:
@@ -212,6 +216,7 @@ public struct ConvertAction: Action, RecreatingContext {
         diagnosticEngine: DiagnosticEngine? = nil,
         emitFixits: Bool = false,
         inheritDocs: Bool = false,
+        disableInheritedSymbols: Bool = false,
         experimentalEnableCustomTemplates: Bool = false,
         transformForStaticHosting: Bool,
         hostingBasePath: String?,
@@ -245,6 +250,7 @@ public struct ConvertAction: Action, RecreatingContext {
             diagnosticEngine: diagnosticEngine,
             emitFixits: emitFixits,
             inheritDocs: inheritDocs,
+            disableInheritedSymbols: disableInheritedSymbols,
             experimentalEnableCustomTemplates: experimentalEnableCustomTemplates,
             transformForStaticHosting: transformForStaticHosting,
             hostingBasePath: hostingBasePath,

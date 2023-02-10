@@ -2196,6 +2196,48 @@ class ConvertActionTests: XCTestCase {
             temporaryDirectory: createTemporaryDirectory())
         XCTAssertEqual(action.context.externalMetadata.inheritDocs, false)
     }
+
+    func testConvertDisableInheritedSymbolsOption() throws {
+        // Empty documentation bundle
+        let bundle = Folder(name: "unit-test.documentation", content: [
+            InfoPlist(displayName: "TestBundle", identifier: "com.test.example"),
+        ])
+
+        let testDataProvider = try TestFileSystem(folders: [bundle, Folder.emptyHTMLTemplateDirectory])
+        let targetDirectory = URL(fileURLWithPath: testDataProvider.currentDirectoryPath)
+            .appendingPathComponent("target", isDirectory: true)
+
+        // Verify setting the flag explicitly
+        for flag in [false, true] {
+            let action = try ConvertAction(
+                documentationBundleURL: bundle.absoluteURL,
+                outOfProcessResolver: nil,
+                analyze: false,
+                targetDirectory: targetDirectory,
+                htmlTemplateDirectory: Folder.emptyHTMLTemplateDirectory.absoluteURL,
+                emitDigest: false,
+                currentPlatforms: nil,
+                dataProvider: testDataProvider,
+                fileManager: testDataProvider,
+                temporaryDirectory: createTemporaryDirectory(),
+                disableInheritedSymbols: flag)
+            XCTAssertEqual(action.context.externalMetadata.disableInheritedSymbols, flag)
+        }
+
+        // Verify implicit value
+        let action = try ConvertAction(
+            documentationBundleURL: bundle.absoluteURL,
+            outOfProcessResolver: nil,
+            analyze: false,
+            targetDirectory: targetDirectory,
+            htmlTemplateDirectory: Folder.emptyHTMLTemplateDirectory.absoluteURL,
+            emitDigest: false,
+            currentPlatforms: nil,
+            dataProvider: testDataProvider,
+            fileManager: testDataProvider,
+            temporaryDirectory: createTemporaryDirectory())
+        XCTAssertEqual(action.context.externalMetadata.disableInheritedSymbols, false)
+    }
     
     func testEmitsDigest() throws {
         let bundle = Folder(name: "unit-test.docc", content: [
