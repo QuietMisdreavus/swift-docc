@@ -82,8 +82,26 @@ struct SymbolGraphLoader {
 
                 if metadata.disableInheritedSymbols {
                     for relationship in symbolGraph.relationships {
-                        if relationship.mixins.keys.contains(SymbolGraph.Relationship.SourceOrigin.mixinKey) {
-                            filteredSymbols.insert(relationship.source)
+                        if let sourceOrigin = relationship[mixin: SymbolGraph.Relationship.SourceOrigin.self],
+                           let symbol = symbolGraph.symbols[relationship.source]
+                        {
+                            // first do the quick check: if the doc comment isn't from this module,
+                            // then it's definitely been inherited; toss it
+                            // (`isDocCommentFromSameModule(symbolModuleName:)` returns nil if there
+                            // is no doc comment, so this will also catch a symbol with no comment)
+                            if symbol.isDocCommentFromSameModule(symbolModuleName: symbolGraph.module.name) != true {
+                                filteredSymbols.insert(relationship.source)
+                            } else if let sourceSymbol = symbolGraph.symbols[sourceOrigin.identifier],
+                                      sourceSymbol.docComment?.uri == symbol.docComment?.uri,
+                                      sourceSymbol.docComment?.lines.first?.range == symbol.docComment?.lines.first?.range
+                            {
+                                // otherwise, we have to do something a bit more awkward: comparing
+                                // the doc comments directly. since the file and line number information
+                                // is present, we can shortcut doing a full string comparison by just
+                                // checking the file and range of the first line. if they match, this
+                                // symbol inherited its docs, so drop it
+                                filteredSymbols.insert(relationship.source)
+                            }
                         }
                     }
                 }
