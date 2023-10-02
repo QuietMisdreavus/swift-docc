@@ -231,6 +231,7 @@ extension AutomaticCuration {
     /// documentation hierarchy.
     static let groupKindOrder: [SymbolGraph.Symbol.KindIdentifier] = [
         .`class`,
+        .`actor`,
         .`protocol`,
         .`struct`,
         .`httpRequest`,
