@@ -4385,6 +4385,43 @@ let expected = """
         XCTAssertEqual(overloadGroupSemantic.navigator, simplifiedFragments)
     }
 
+    func testConflictingOverloadGroupPages() throws {
+        enableFeatureFlag(\.isExperimentalOverloadedSymbolPresentationEnabled)
+
+        let overloadableKindIDs = SymbolGraph.Symbol.KindIdentifier.allCases.filter { $0.isOverloadableKind }
+        // Generate a 4 symbols with the same name for every overloadable symbol kind where every symbol has the same name
+        let symbols: [SymbolGraph.Symbol] = overloadableKindIDs.flatMap { [
+            makeSymbol(identifier: "first-\($0.identifier)-id", kind: $0),
+            makeSymbol(identifier: "second-\($0.identifier)-id", kind: $0),
+            makeSymbol(identifier: "third-\($0.identifier)-id", kind: $0),
+            makeSymbol(identifier: "fourth-\($0.identifier)-id", kind: $0),
+        ] }
+
+        let tempURL = try createTempFolder(content: [
+            Folder(name: "unit-test.docc", content: [
+                JSONFile(name: "ModuleName.symbols.json", content: makeSymbolGraph(
+                    moduleName: "ModuleName",
+                    symbols: symbols
+                ))
+            ])
+        ])
+        let (_, _, context) = try loadBundle(from: tempURL)
+
+        var overloadGroupPages = Set<ResolvedTopicReference>()
+
+        for symbolIdentifier in symbols.map({ $0.identifier.precise }) {
+            let reference = try XCTUnwrap(context.documentationCache.reference(symbolID: symbolIdentifier))
+            let overloadedDocumentationNode = try XCTUnwrap(context.documentationCache[reference])
+            let overloadedSymbol = try XCTUnwrap(overloadedDocumentationNode.semantic as? Symbol)
+
+            let overloads = try XCTUnwrap(overloadedSymbol.overloadsVariants.firstValue)
+            overloadGroupPages.insert(overloads.overloadGroup)
+        }
+
+        // Ensure that each group of overloaded symbols have a unique overload group page
+        XCTAssertEqual(overloadGroupPages.count, overloadableKindIDs.count)
+    }
+
     // A test helper that creates a symbol with a given identifier and kind.
     private func makeSymbol(
         name: String = "SymbolName",

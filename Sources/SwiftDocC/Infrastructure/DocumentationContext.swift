@@ -2321,12 +2321,15 @@ public class DocumentationContext: DocumentationContextDataProviderDelegate {
             return
         }
 
-        try linkResolver.traverseOverloadedSymbols { (parent, overloadedSymbolReferences) in
+        // In case of overload groups that conflict in their name but not their symbol kind (e.g.
+        // instance methods versus static methods), keep track of the overload groups we encounter
+        // based on their generated page's topic reference.
+        var overloadGroups = [ResolvedTopicReference : [(parent: ResolvedTopicReference, kind: String, symbolReferences: [ResolvedTopicReference])]]()
+
+        linkResolver.traverseOverloadedSymbols { (parent, kind, overloadedSymbolReferences) in
             guard overloadedSymbolReferences.count > 1,
                 let firstOverloadReference = overloadedSymbolReferences.first,
-                let firstOverloadTopicNode = topicGraph.nodeWithReference(firstOverloadReference),
-                let firstOverloadDocumentationNode = try? entity(with: firstOverloadReference),
-                let firstOverloadSymbol = firstOverloadDocumentationNode.semantic as? Symbol else {
+                let firstOverloadTopicNode = topicGraph.nodeWithReference(firstOverloadReference) else {
                 return
             }
 
@@ -2338,6 +2341,22 @@ public class DocumentationContext: DocumentationContextDataProviderDelegate {
                 path: overloadGroupPath,
                 sourceLanguages: firstOverloadTopicNode.reference.sourceLanguages
             )
+
+            overloadGroups[overloadGroupReference, default: []].append((parent, kind, overloadedSymbolReferences))
+        }
+
+        func processOverloads(
+            overloadGroupReference: ResolvedTopicReference,
+            parent: ResolvedTopicReference,
+            overloadedSymbolReferences: [ResolvedTopicReference]
+        ) throws {
+            guard overloadedSymbolReferences.count > 1,
+                let firstOverloadReference = overloadedSymbolReferences.first,
+                let firstOverloadTopicNode = topicGraph.nodeWithReference(firstOverloadReference),
+                let firstOverloadDocumentationNode = try? entity(with: firstOverloadReference),
+                let firstOverloadSymbol = firstOverloadDocumentationNode.semantic as? Symbol else {
+                return
+            }
 
             // Tell each symbol what other symbols overload it.
             for (index, symbolReference) in overloadedSymbolReferences.indexed() {
@@ -2363,7 +2382,7 @@ public class DocumentationContext: DocumentationContextDataProviderDelegate {
                 )
                 symbol.overloadsVariants = .init(swiftVariant: overloads)
             }
-            
+
             // Add the topic graph node
             let overloadGroupTopicGraphNode = TopicGraph.Node(reference: overloadGroupReference,
                                                               kind: firstOverloadTopicNode.kind,
@@ -2371,7 +2390,7 @@ public class DocumentationContext: DocumentationContextDataProviderDelegate {
                                                               title: firstOverloadTopicNode.title,
                                                               isResolvable: true) // not sure what to put here
             topicGraph.addNode(overloadGroupTopicGraphNode)
-            
+
             // Create the new overload group symbol
             // This needs to be a clone because otherwise the declaration simplifications below will
             // also modify the original overload symbol
@@ -2390,7 +2409,7 @@ public class DocumentationContext: DocumentationContextDataProviderDelegate {
                 kind: firstOverloadDocumentationNode.kind,
                 sourceLanguage: firstOverloadReference.sourceLanguage,
                 availableSourceLanguages: firstOverloadReference.sourceLanguages,
-                name: firstOverloadDocumentationNode.name, 
+                name: firstOverloadDocumentationNode.name,
                 markup: firstOverloadDocumentationNode.markup,
                 semantic: overloadGroupSymbol
             )
@@ -2398,6 +2417,29 @@ public class DocumentationContext: DocumentationContextDataProviderDelegate {
             documentationCache[overloadGroupReference] = overloadGroupNode
             linkResolver.addOverloadGroup(named: overloadGroupSymbol.title, reference: overloadGroupReference,
                                           kind: overloadGroupSymbol.kind.identifier.identifier, symbol: firstOverloadDocumentationNode.symbol, to: parent)
+        }
+
+        for (overloadGroupReference, overloads) in overloadGroups where !overloads.isEmpty {
+            if overloads.count == 1 {
+                try processOverloads(
+                    overloadGroupReference: overloadGroupReference,
+                    parent: overloads.first!.parent,
+                    overloadedSymbolReferences: overloads.first!.symbolReferences)
+            } else {
+                for (parent, kind, symbolReferences) in overloads {
+                    // Create a new overload group topic reference by appending the symbol kind to
+                    // the previous generated path.
+                    let correctedGroupReference = ResolvedTopicReference(
+                        bundleIdentifier: overloadGroupReference.bundleIdentifier,
+                        path: "\(overloadGroupReference.path)-\(kind)",
+                        sourceLanguage: overloadGroupReference.sourceLanguage)
+
+                    try processOverloads(
+                        overloadGroupReference: correctedGroupReference,
+                        parent: parent,
+                        overloadedSymbolReferences: symbolReferences)
+                }
+            }
         }
     }
     

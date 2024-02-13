@@ -484,13 +484,13 @@ extension PathHierarchy {
         return Array(result) + modules.map { $0.identifier }
     }
 
-    func traverseOverloadedSymbolGroups(observe: (_ id: ResolvedIdentifier, _ overloadedSymbols: [ResolvedIdentifier]) throws -> Void) rethrows {
+    func traverseOverloadedSymbolGroups(observe: (_ id: ResolvedIdentifier, _ kind: String, _ overloadedSymbols: [ResolvedIdentifier]) throws -> Void) rethrows {
         for (id, node) in lookup where node.symbol != nil {
             for disambiguation in node.children.values {
                 for (kind, innerStorage) in disambiguation.storage where innerStorage.count > 1 && SymbolGraph.Symbol.KindIdentifier(identifier: kind).isOverloadableKind {
                     assert(innerStorage.values.allSatisfy { $0.symbol != nil }, "Only symbols should have symbol kind identifiers (\(kind))")
 
-                    try observe(id, innerStorage.values.map(\.identifier))
+                    try observe(id, kind, innerStorage.values.map(\.identifier))
                 }
             }
         }
