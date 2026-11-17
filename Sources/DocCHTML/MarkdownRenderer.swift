@@ -460,8 +460,16 @@ package struct MarkdownRenderer<Provider: LinkProvider, Parser: RenderableDirect
     /// </pre>
     /// ```
     func visit(_ codeBlock: CodeBlock) -> HTMLNode {
-        pre(
-            attributes: codeBlock.language.map { [.class($0)] } ?? [],
+        let options = CodeBlockOptions(parsingLanguageString: codeBlock.language)
+
+        var attributes: [HTMLNode.Attribute] = []
+
+        if let language = options.language {
+            attributes.append(.class(language))
+        }
+
+        return pre(
+            attributes: attributes,
             contents: [code(contents: [.text(codeBlock.code)])]
         )
     }
