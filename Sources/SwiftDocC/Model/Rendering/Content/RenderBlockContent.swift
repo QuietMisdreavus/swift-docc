@@ -8,6 +8,7 @@
  See https://swift.org/CONTRIBUTORS.txt for Swift project authors
 */
 
+@_documentation(visibility: internal) @_exported public import struct DocCCommon.CodeBlockOptions
 public import Markdown
 import Foundation
 
@@ -215,225 +216,16 @@ public enum RenderBlockContent: Equatable {
         }
     }
 
-    public struct CodeBlockOptions: Equatable {
-        public var language: String?
-        public var copyToClipboard: Bool
-        public var showLineNumbers: Bool
-        public var wrap: Int
-        public var lineAnnotations: [LineAnnotation]
-
-        public struct Position: Equatable, Comparable, Codable {
-            public static func < (lhs: RenderBlockContent.CodeBlockOptions.Position, rhs: RenderBlockContent.CodeBlockOptions.Position) -> Bool {
-                if lhs.line == rhs.line, let lhsCharacter = lhs.character, let rhsCharacter = rhs.character {
-                    return lhsCharacter < rhsCharacter
-                }
-                return lhs.line < rhs.line
-            }
-
-            public init(line: Int, character: Int? = nil) {
-                self.line = line
-                self.character = character
-            }
-
-            public var line: Int
-            public var character: Int?
-        }
-
-        public struct LineAnnotation: Equatable, Codable {
-            public var style: String
-            public var range: Range<Position>
-            
-            public init(style: String, range: Range<Position>) {
-                self.style = style
-                self.range = range
-            }
-        }
-
-        public enum OptionName: String, CaseIterable {
-            case _nonFrozenEnum_useDefaultCase
-            case nocopy
-            case wrap
-            case highlight
-            case showLineNumbers
-            case strikeout
-            case unknown
-
-            init?(caseInsensitive raw: some StringProtocol) {
-                self.init(rawValue: raw.lowercased())
-            }
-        }
-
-        public static var knownOptions: Set<String> {
-            Set(OptionName.allCases.map(\.rawValue))
-        }
-
-        // empty initializer with default values
-        @available(*, deprecated, renamed: "init(copyToClipboard:showLineNumbers:wrap:lineAnnotations:)", message: "Use 'CodeBlockOptions.init(copyToClipboard:showLineNumbers:wrap:lineAnnotations:)' instead. This deprecated API will be removed after 6.5 is released.")
-        public init() {
-            self.language = ""
-            self.copyToClipboard = FeatureFlags.current.isCodeBlockAnnotationsEnabled
-            self.showLineNumbers = false
-            self.wrap = 0
-            self.lineAnnotations = []
-        }
-
-        public init(parsingLanguageString language: String?) {
-            let (lang, tokens) = Self.tokenizeLanguageString(language)
-
-            self.language = lang
-            self.copyToClipboard = !tokens.contains { $0.name == .nocopy }
-            self.showLineNumbers = tokens.contains { $0.name == .showLineNumbers }
-
-            if let wrapString = tokens.first(where: { $0.name == .wrap })?.value,
-               let wrapValue = Int(wrapString) {
-                self.wrap = wrapValue
-            } else {
-                self.wrap = 0
-            }
-
-            var annotations: [LineAnnotation] = []
-
-            if let highlightString = tokens.first(where: { $0.name == .highlight })?.value {
-                let highlightValue = Self.parseCodeBlockOptionsArray(highlightString)
-                for line in highlightValue {
-                    let pos = Position(line: line, character: nil)
-                    let range = pos..<pos
-                    annotations.append(LineAnnotation(style: "highlight", range: range))
-                }
-            }
-
-            if let strikeoutString = tokens.first(where: { $0.name == .strikeout })?.value {
-                let strikeoutValue = Self.parseCodeBlockOptionsArray(strikeoutString)
-                for line in strikeoutValue {
-                    let pos = Position(line: line, character: nil)
-                    let range = pos..<pos
-                    annotations.append(LineAnnotation(style: "strikeout", range: range))
-                }
-            }
-
-            self.lineAnnotations = annotations
-        }
-
-        public init(copyToClipboard: Bool, showLineNumbers: Bool = false, wrap: Int, highlight: [Int], strikeout: [Int]) {
-            self.copyToClipboard = copyToClipboard
-            self.showLineNumbers = showLineNumbers
-            self.wrap = wrap
-
-            var annotations: [LineAnnotation] = []
-            for line in highlight {
-                    let pos = Position(line: line, character: nil)
-                    let range = pos..<pos
-                    annotations.append(LineAnnotation(style: "highlight", range: range))
-            }
-            for line in strikeout {
-                    let pos = Position(line: line, character: nil)
-                    let range = pos..<pos
-                    annotations.append(LineAnnotation(style: "strikeout", range: range))
-            }
-            self.lineAnnotations = annotations
-        }
-        
-        @available(*, deprecated, renamed: "init(copyToClipboard:showLineNumbers:wrap:lineAnnotations:)", message: "Use 'CodeBlockOptions.init(copyToClipboard:showLineNumbers:wrap:lineAnnotations:)' instead. This deprecated API will be removed after 6.5 is released.")
-        public init(showLineNumbers: Bool = false, wrap: Int, highlight: [Int], strikeout: [Int]) {
-            self.init(copyToClipboard: FeatureFlags.current.isCodeBlockAnnotationsEnabled, showLineNumbers: showLineNumbers, wrap: wrap, highlight: highlight, strikeout: strikeout)
-        }
-
-        public init(copyToClipboard: Bool, showLineNumbers: Bool, wrap: Int, lineAnnotations: [LineAnnotation]) {
-            self.copyToClipboard = copyToClipboard
-            self.showLineNumbers = showLineNumbers
-            self.wrap = wrap
-            self.lineAnnotations = lineAnnotations
-        }
-
-        /// A function that parses array values on code block options from the language line string
-        static internal func parseCodeBlockOptionsArray(_ value: String?) -> [Int] {
-            guard var s = value?.trimmingCharacters(in: .whitespaces), !s.isEmpty else { return [] }
-
-            if s.hasPrefix("[") && s.hasSuffix("]") {
-                s.removeFirst()
-                s.removeLast()
-            }
-
-            return s.split(separator: ",").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
-        }
-
-        /// A function that parses the language line options on code blocks, returning the language and tokens, an array of OptionName and option values
-        static internal func tokenizeLanguageString(_ input: String?) -> (lang: String?, tokens: [(name: OptionName, value: String?)]) {
-            guard let input else { return (lang: nil, tokens: []) }
-
-            let parts = parseLanguageString(input)
-            var tokens: [(OptionName, String?)] = []
-            var lang: String? = nil
-
-            for (index, part) in parts.enumerated() {
-                if let eq = part.firstIndex(of: "=") {
-                    let key = part[..<eq].trimmingCharacters(in: .whitespaces).lowercased()
-                    let value = part[part.index(after: eq)...].trimmingCharacters(in: .whitespaces)
-                    if key == "wrap" {
-                        tokens.append((.wrap, value))
-                    } else if key == "highlight" {
-                        tokens.append((.highlight, value))
-                    } else if key == "strikeout" {
-                        tokens.append((.strikeout, value))
-                    } else {
-                        tokens.append((.unknown, key))
-                    }
-                } else {
-                    let key = part.trimmingCharacters(in: .whitespaces).lowercased()
-                    if key == "nocopy" {
-                        tokens.append((.nocopy, nil as String?))
-                    } else if key == "showlinenumbers" {
-                        tokens.append((.showLineNumbers, nil as String?))
-                    } else if key == "wrap" {
-                        tokens.append((.wrap, nil as String?))
-                    } else if key == "highlight" {
-                        tokens.append((.highlight, nil as String?))
-                    } else if key == "strikeout" {
-                        tokens.append((.strikeout, nil as String?))
-                    } else if index == 0 && !key.contains("[") && !key.contains("]") {
-                        lang = key
-                    } else {
-                        tokens.append((.unknown, key))
-                    }
-                }
-            }
-            return (lang, tokens)
-        }
-
-        // helper function for tokenizeLanguageString to parse the language line
-        static func parseLanguageString(_ input: String?) -> [Substring] {
-
-            guard let input else { return [] }
-            var parts: [Substring] = []
-            var start = input.startIndex
-            var i = input.startIndex
-
-            var bracketDepth = 0
-
-            while i < input.endIndex {
-                let c = input[i]
-
-                if c == "[" { bracketDepth += 1 }
-                else if c == "]" { bracketDepth = max(0, bracketDepth - 1) }
-                else if c == "," && bracketDepth == 0 {
-                    let seq = input[start..<i]
-                    if !seq.isEmpty {
-                        parts.append(seq)
-                    }
-                    input.formIndex(after: &i)
-                    start = i
-                    continue
-                }
-                input.formIndex(after: &i)
-            }
-            let tail = input[start..<input.endIndex]
-            if !tail.isEmpty {
-                parts.append(tail)
-            }
-
-            return parts
-        }
-    }
+    // HACK: There's currently no way to re-export a type from another module anywhere other than top-level scope.
+    // This type is currently re-exported from DocCCommon into SwiftDocC at the top of this file,
+    // but that import has `@_documentation(visibility: internal)` applied to it so it does not
+    // create an extra declaration in the docs. However, that means that this type alias here shows
+    // up as a type alias, rather than a redeclaration of the type itself.
+    // This is an issue on Swift's symbol graph generation, see rdar://193037828
+    /// The available options that can be parsed from a code block.
+    ///
+    /// See ``DocCCommon/CodeBlockOptions`` for complete documentation.
+    public typealias CodeBlockOptions = SwiftDocC.CodeBlockOptions
 
     /// A heading with the given level.
     public struct Heading: Equatable {
@@ -1216,5 +1008,26 @@ extension RenderBlockContent: Codable {
         default:
             fatalError("unknown RenderBlockContent case in encode method")
         }
+    }
+}
+
+// These initializers both use FeatureFlags state that is not available from DocCCommon, plus they're
+// both deprecated, so they are only available in SwiftDocC itself.
+public extension RenderBlockContent.CodeBlockOptions {
+    // empty initializer with default values
+    @available(*, deprecated, renamed: "init(copyToClipboard:showLineNumbers:wrap:lineAnnotations:)", message: "Use 'CodeBlockOptions.init(copyToClipboard:showLineNumbers:wrap:lineAnnotations:)' instead. This deprecated API will be removed after 6.5 is released.")
+    init() {
+        self.init(
+            copyToClipboard: FeatureFlags.current.isCodeBlockAnnotationsEnabled,
+            showLineNumbers: false,
+            wrap: 0,
+            lineAnnotations: []
+        )
+        self.language = ""
+    }
+
+    @available(*, deprecated, renamed: "init(copyToClipboard:showLineNumbers:wrap:lineAnnotations:)", message: "Use 'CodeBlockOptions.init(copyToClipboard:showLineNumbers:wrap:lineAnnotations:)' instead. This deprecated API will be removed after 6.5 is released.")
+    init(showLineNumbers: Bool = false, wrap: Int, highlight: [Int], strikeout: [Int]) {
+        self.init(copyToClipboard: FeatureFlags.current.isCodeBlockAnnotationsEnabled, showLineNumbers: showLineNumbers, wrap: wrap, highlight: highlight, strikeout: strikeout)
     }
 }
