@@ -463,9 +463,19 @@ package struct MarkdownRenderer<Provider: LinkProvider, Parser: RenderableDirect
         let options = CodeBlockOptions(parsingLanguageString: codeBlock.language)
 
         var attributes: [HTMLNode.Attribute] = []
+        var classNames: [String] = []
 
         if let language = options.language {
-            attributes.append(.class(language))
+            classNames.append(language)
+        }
+
+        if options.wrap > 0 {
+            classNames.append("is-wrapped")
+            attributes.append(.cssCustomProperties(["wrap-ch": String(options.wrap)]))
+        }
+
+        if !classNames.isEmpty {
+            attributes.append(.class(classNames.joined(separator: " ")))
         }
 
         return pre(

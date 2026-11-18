@@ -815,6 +815,13 @@ pre {
   overflow-wrap: normal;
 }
 
+.is-wrapped code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  max-width: calc(var(--wrap-ch) * 1ch);
+}
+
 body > header {
   position: sticky;
   top: 0;
