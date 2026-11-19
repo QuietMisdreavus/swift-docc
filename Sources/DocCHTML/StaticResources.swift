@@ -82,6 +82,10 @@ package enum StaticResources {
   
   --color-figure-gray-secondary: rgb(102, 102, 102);
   --color-figure-blue: rgb(51, 102, 255);
+
+  /* CSS Relative Colors (i.e. `rgb(from <color>)`) are newly available, so copy the values from --color-figure-blue */
+  --color-code-line-highlight: rgba(51, 102, 255, 8%);
+  --color-code-line-highlight-border: var(--color-figure-blue);
   
   --font-default: "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: Menlo, monospace;
@@ -502,6 +506,10 @@ section:first-of-type > p {
   --color-syntax-strings: rgb(209, 47, 27);
   --color-syntax-type-declarations: rgb(3, 99, 140);
   --color-syntax-urls: rgb(19, 55, 255);
+
+  &:has(mark) {
+    padding-left: 26px;
+  }
   
   &> code {
     display: block;
@@ -520,6 +528,20 @@ section:first-of-type > p {
       &:not(:hover) {
         text-decoration: none;
       }
+    }
+
+    &> mark {
+      /* Shift the highlight to the left to account for its border and padding */
+      position: relative;
+      left: -12px;
+      padding-left: 8px;
+      border-left: 4px solid var(--color-code-line-highlight-border);
+      background: var(--color-code-line-highlight);
+
+      /* Apply inline-block sizing to allow the highlight to stretch across the whole container */
+      display: inline-block;
+      width: 100%;
+      box-sizing: border-box;
     }
   }
 }

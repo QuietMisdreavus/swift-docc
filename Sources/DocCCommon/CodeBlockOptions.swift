@@ -157,6 +157,26 @@ public struct CodeBlockOptions: Equatable {
         self.lineAnnotations = lineAnnotations
     }
 
+    /// Finds the whole-line styles for this code block and returns them as a map of line numbers to styles.
+    package func annotationsPerLine() -> [Int: [String]] {
+        var result: [Int: [String]] = [:]
+
+        for annotation in lineAnnotations {
+            // We're only checking for whole-line annotations here, so discard anything with character positions
+            if annotation.range.lowerBound.character == nil && annotation.range.upperBound.character == nil {
+                if annotation.range.lowerBound.line == annotation.range.upperBound.line {
+                    result[annotation.range.lowerBound.line, default: []].append(annotation.style)
+                } else {
+                    for lineNumber in annotation.range.lowerBound.line..<annotation.range.upperBound.line {
+                        result[lineNumber, default: []].append(annotation.style)
+                    }
+                }
+            }
+        }
+
+        return result
+    }
+
     /// A function that parses array values on code block options from the language line string
     static package func parseCodeBlockOptionsArray(_ value: String?) -> [Int] {
         guard var s = value?.trimmingCharacters(in: .whitespaces), !s.isEmpty else { return [] }

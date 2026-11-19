@@ -478,9 +478,35 @@ package struct MarkdownRenderer<Provider: LinkProvider, Parser: RenderableDirect
             attributes.append(.class(classNames.joined(separator: " ")))
         }
 
+        let codeLines = codeBlock.code.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
+        let startLineNumber = 1 // line numbers in code annotations are 1-indexed
+        let lineAnnotations = options.annotationsPerLine()
+
+        var codeContents: [HTMLNode] = []
+
+        for (index, line) in codeLines.enumerated() {
+            if !codeContents.isEmpty {
+                // If we're adding a line to an existing block, put a line break so the <pre> can render it
+                codeContents.append(.text("\n"))
+            }
+            var lineContent = HTMLNode.text(String(line))
+
+            if let styles = lineAnnotations[index + startLineNumber] {
+                if styles.contains("strikeout") {
+                    lineContent = s(contents: [lineContent])
+                }
+
+                if styles.contains("highlight") {
+                    lineContent = mark(contents: [lineContent])
+                }
+            }
+
+            codeContents.append(lineContent)
+        }
+
         return pre(
             attributes: attributes,
-            contents: [code(contents: [.text(codeBlock.code)])]
+            contents: [code(contents: codeContents)]
         )
     }
     
