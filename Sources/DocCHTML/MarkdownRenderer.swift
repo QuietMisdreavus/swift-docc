@@ -478,14 +478,19 @@ package struct MarkdownRenderer<Provider: LinkProvider, Parser: RenderableDirect
             attributes.append(.class(classNames.joined(separator: " ")))
         }
 
-        let codeLines = codeBlock.code.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
+        var codeLines = codeBlock.code.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
+        if codeLines.last?.isEmpty == true {
+            // `omittingEmptySubsequences: false` leaves an empty line at the end due to a trailing newline,
+            // which can mess up rendering when line numbers are shown
+            codeLines.removeLast()
+        }
         let startLineNumber = 1 // line numbers in code annotations are 1-indexed
         let lineAnnotations = options.annotationsPerLine()
 
         var codeContents: [HTMLNode] = []
 
         for (index, line) in codeLines.enumerated() {
-            if !codeContents.isEmpty {
+            if !codeContents.isEmpty, !options.showLineNumbers {
                 // If we're adding a line to an existing block, put a line break so the <pre> can render it
                 codeContents.append(.text("\n"))
             }
@@ -501,7 +506,15 @@ package struct MarkdownRenderer<Provider: LinkProvider, Parser: RenderableDirect
                 }
             }
 
+            if options.showLineNumbers {
+                lineContent = li(contents: [lineContent])
+            }
+
             codeContents.append(lineContent)
+        }
+
+        if options.showLineNumbers {
+            codeContents = [ol(contents: codeContents)]
         }
 
         return pre(

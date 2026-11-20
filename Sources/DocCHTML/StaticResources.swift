@@ -534,14 +534,46 @@ section:first-of-type > p {
       /* Shift the highlight to the left to account for its border and padding */
       position: relative;
       left: -12px;
-      padding-left: 8px;
-      border-left: 4px solid var(--color-code-line-highlight-border);
-      background: var(--color-code-line-highlight);
 
       /* Apply inline-block sizing to allow the highlight to stretch across the whole container */
       display: inline-block;
-      width: 100%;
       box-sizing: border-box;
+    }
+
+    > mark, li:has(mark) {
+      padding-left: 8px;
+      border-left: 4px solid var(--color-code-line-highlight-border);
+      background: var(--color-code-line-highlight);
+      width: 100%;
+    }
+
+    &> ol {
+      list-style-type: none;
+
+      &> li {
+        position: relative;
+
+        &:not(:has(mark)) {
+          left: -40px;
+        }
+
+        &:has(mark) {
+          left: -52px;
+        }
+
+        &::before {
+          content: counter(list-item);
+          user-select: none;
+          color: var(--color-figure-gray-secondary);
+          display: inline-block;
+          padding: 0 1rem 0 8px;
+        }
+
+        mark {
+          background-color: unset;
+          color: unset;
+        }
+      }
     }
   }
 }
